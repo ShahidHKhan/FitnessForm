@@ -4,6 +4,8 @@ const errorBox = document.getElementById("error");
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  // reset UI
   errorBox.classList.add("hidden");
   results.classList.add("hidden");
 
@@ -11,6 +13,7 @@ form.addEventListener("submit", async (e) => {
 
   const payload = {
     name: formData.get("name"),
+    email: formData.get("email"),
     sex: formData.get("sex"),
     height_cm: Number(formData.get("height_cm")),
     weight_lbs: Number(formData.get("weight_lbs")),
@@ -33,13 +36,10 @@ form.addEventListener("submit", async (e) => {
       return;
     }
 
-    document.getElementById("bmi").textContent = data.data.bmi;
-    document.getElementById("category").textContent = data.data.bmi_category;
-    document.getElementById("ratio").textContent = data.data.waist_height_ratio;
-    document.getElementById("bodyfat").textContent =
-      data.data.body_fat_percentage ?? "N/A";
-
+    // SUCCESS UX: no metrics shown
+    form.reset();
     results.classList.remove("hidden");
+
   } catch (err) {
     errorBox.textContent = "Server error. Please try again.";
     errorBox.classList.remove("hidden");

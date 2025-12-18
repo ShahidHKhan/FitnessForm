@@ -1,6 +1,9 @@
+require("dotenv").config();
+
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const nodemailer = require("nodemailer");
 
 const app = express();
 const PORT = 3000;
@@ -8,6 +11,15 @@ const PORT = 3000;
 /* ---------- Middleware ---------- */
 app.use(express.json());
 app.use(express.static("public"));
+
+/* ---------- Email Transport (Gmail App Password) ---------- */
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 /* ---------- Routes ---------- */
 
@@ -17,11 +29,19 @@ app.get("/", (req, res) => {
 });
 
 // Form submission route
-app.post("/submit", (req, res) => {
-  const { name, sex, height_cm, weight_lbs, waist_cm, neck_cm } = req.body;
+app.post("/submit", async (req, res) => {
+  const { name, email, sex, height_cm, weight_lbs, waist_cm, neck_cm } = req.body;
 
   /* ---------- Validation ---------- */
-  if (!name || !sex || !height_cm || !weight_lbs || !waist_cm || !neck_cm) {
+  if (
+    !name ||
+    !email ||
+    !sex ||
+    !height_cm ||
+    !weight_lbs ||
+    !waist_cm ||
+    !neck_cm
+  ) {
     return res.status(400).json({
       success: false,
       error: "Missing required fields",
@@ -65,7 +85,6 @@ app.post("/submit", (req, res) => {
 
   /* ---------- Body Fat Percentage (US Navy) ---------- */
   let body_fat_percentage = null;
-
   if (sex.toLowerCase() === "male") {
     body_fat_percentage =
       86.010 * Math.log10(waist_cm - neck_cm) -
@@ -73,9 +92,10 @@ app.post("/submit", (req, res) => {
       36.76;
   }
 
-  /* ---------- Record to Store ---------- */
+  /* ---------- Record (still structured in code) ---------- */
   const record = {
     name,
+    email,
     sex,
     height_cm,
     weight_lbs,
@@ -95,22 +115,72 @@ app.post("/submit", (req, res) => {
   };
 
   /* ---------- File Storage ---------- */
-
-  // Ensure data directory exists
   const dataDir = path.join(__dirname, "data");
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir);
   }
 
-  // Sanitize name for filename
   const safeName = name.replace(/[^a-zA-Z0-9]/g, "_");
-
-  // Create filename
   const filename = `${safeName}_data.txt`;
   const filePath = path.join(dataDir, filename);
 
-  // Write formatted JSON to .txt file
-  fs.writeFileSync(filePath, JSON.stringify(record, null, 2), "utf8");
+  /* ---------- Build UI-Friendly Report ---------- */
+  const reportText = `
+FITNESS METRICS REPORT
+======================
+
+Name: ${record.name}
+Email: ${record.email}
+Sex: ${record.sex.charAt(0).toUpperCase() + record.sex.slice(1)}
+
+Measurements
+------------
+Height: ${record.height_cm} cm
+Weight: ${record.weight_lbs} lbs (${record.weight_kg} kg)
+Waist: ${record.waist_cm} cm
+Neck: ${record.neck_cm} cm
+
+Computed Metrics
+----------------
+BMI: ${record.metrics.bmi}
+BMI Category: ${record.metrics.bmi_category}
+Waist-to-Height Ratio: ${record.metrics.waist_height_ratio}
+Body Fat Percentage: ${
+    record.metrics.body_fat_percentage !== null
+      ? record.metrics.body_fat_percentage + "%"
+      : "N/A"
+  }
+
+Report Generated At
+-------------------
+${new Date(record.timestamp).toUTCString()}
+`.trim();
+
+  /* ---------- Write the formatted report ---------- */
+  fs.writeFileSync(filePath, reportText, "utf8");
+
+  /* ---------- Email the File ---------- */
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      bcc: process.env.OWNER_EMAIL,
+      subject: "Your Fitness Metrics Report",
+      text: "Your fitness metrics report is attached.",
+      attachments: [
+        {
+          filename: filename,
+          path: filePath,
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("Email failed:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to send email",
+    });
+  }
 
   /* ---------- Response ---------- */
   res.json({

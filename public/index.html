@@ -19,6 +19,11 @@
         </div>
 
         <div>
+          <label>Email</label>
+          <input type="email" name="email" required />
+        </div>
+
+        <div>
           <label>Sex</label>
           <select name="sex" required>
             <option value="">Select</option>
@@ -52,14 +57,12 @@
     </form>
 
     <div id="results" class="card hidden">
-      <h2>Results</h2>
-      <div class="results-grid">
-        <div><strong>BMI:</strong> <span id="bmi"></span></div>
-        <div><strong>Category:</strong> <span id="category"></span></div>
-        <div><strong>Waist / Height:</strong> <span id="ratio"></span></div>
-        <div><strong>Body Fat %:</strong> <span id="bodyfat"></span></div>
-      </div>
+      <h2>Submission Complete</h2>
+      <p class="confirmation">
+        Thank you! Please check your email for your fitness report.
+      </p>
     </div>
+
 
     <div id="error" class="error hidden"></div>
   </div>
