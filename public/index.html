@@ -9,18 +9,23 @@
 
   <div class="container">
     <h1>Fitness Metrics Calculator</h1>
-    <p class="subtitle">Enter your measurements to get an estimate of your metrics</p>
+    <p class="subtitle">
+      Enter your measurements below. Your report will be sent to your email.
+    </p>
 
     <form id="fitnessForm" class="card">
+
+      <!-- Email (standalone, centered) -->
+      <div class="email-row">
+        <label>Email Address</label>
+        <input type="email" name="email" required />
+      </div>
+
+      <!-- Main grid -->
       <div class="grid">
         <div>
           <label>Name</label>
           <input type="text" name="name" required />
-        </div>
-
-        <div>
-          <label>Email</label>
-          <input type="email" name="email" required />
         </div>
 
         <div>
@@ -53,16 +58,15 @@
         </div>
       </div>
 
-      <button type="submit">Calculate Metrics</button>
+      <button type="submit">Submit & Email Report</button>
     </form>
 
     <div id="results" class="card hidden">
       <h2>Submission Complete</h2>
       <p class="confirmation">
-        Thank you! Please check your email for your fitness report.
+        Thank you. Please check your email for your fitness report.
       </p>
     </div>
-
 
     <div id="error" class="error hidden"></div>
   </div>

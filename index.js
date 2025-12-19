@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const rateLimit = require("express-rate-limit");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -11,6 +12,19 @@ const PORT = 3000;
 /* ---------- Middleware ---------- */
 app.use(express.json());
 app.use(express.static("public"));
+
+/* ---------- Rate Limiting ---------- */
+const submitLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,                 // max 10 submissions per IP per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: "Too many submissions. Please try again later.",
+  },
+});
+
 
 /* ---------- Email Transport (Gmail App Password) ---------- */
 const transporter = nodemailer.createTransport({
@@ -29,7 +43,7 @@ app.get("/", (req, res) => {
 });
 
 // Form submission route
-app.post("/submit", async (req, res) => {
+app.post("/submit", submitLimiter, async (req, res) => {
   const { name, email, sex, height_cm, weight_lbs, waist_cm, neck_cm } = req.body;
 
   /* ---------- Validation ---------- */
@@ -47,6 +61,16 @@ app.post("/submit", async (req, res) => {
       error: "Missing required fields",
     });
   }
+
+  // Email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid email address",
+    });
+  }
+
 
   if (!["male", "female"].includes(sex.toLowerCase())) {
     return res.status(400).json({
@@ -162,9 +186,10 @@ ${new Date(record.timestamp).toUTCString()}
   /* ---------- Email the File ---------- */
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      bcc: process.env.OWNER_EMAIL,
+      from: `"Fitness Metrics Report" <${process.env.EMAIL_USER}>`,
+      to: email,                      // user
+      bcc: process.env.OWNER_EMAIL,   // owner
+      replyTo: email,                 // reply goes to user
       subject: "Your Fitness Metrics Report",
       text: "Your fitness metrics report is attached.",
       attachments: [
